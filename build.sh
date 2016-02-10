@@ -3,10 +3,15 @@
 clear
 
 [ ! -d "build" ] && mkdir build
+
 pushd build
 
-clang -Wall -g -o breakout ../src/breakout.c -lSDL2
+[ ! -f "Makefile" ] && cmake ..
+
+make
+
 success=$?
+
 popd
 
 exit $success
