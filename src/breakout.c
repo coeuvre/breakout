@@ -2,45 +2,41 @@
 
 typedef union {
     struct {
-        float x;
-        float y;
+        f32 x;
+        f32 y;
     };
 
     struct {
-        float u;
-        float v;
+        f32 u;
+        f32 v;
     };
-} Vec2;
+} vec2;
 
-static Vec2
-vec2(float x, float y) {
-    Vec2 result;
-
-    result.x = x;
-    result.y = y;
-
+static inline vec2
+vec2xy(f32 x, f32 y) {
+    vec2 result = {x, y};
     return result;
 }
 
 typedef union {
     struct {
-        float x;
-        float y;
-        float z;
-        float w;
+        f32 x;
+        f32 y;
+        f32 z;
+        f32 w;
     };
 
     struct {
-        float r;
-        float g;
-        float b;
-        float a;
+        f32 r;
+        f32 g;
+        f32 b;
+        f32 a;
     };
-} Vec4;
+} vec4;
 
-static Vec4
-rgba(float r, float g, float b, float a) {
-    Vec4 result;
+static inline vec4
+rgba(f32 r, f32 g, f32 b, f32 a) {
+    vec4 result;
 
     result.r = r;
     result.g = g;
@@ -51,13 +47,13 @@ rgba(float r, float g, float b, float a) {
 }
 
 typedef struct {
-    Vec2 min;
-    Vec2 max;
-} Rect2;
+    vec2 min;
+    vec2 max;
+} rect2;
 
-static Rect2
-rect2_with_min_max(Vec2 min, Vec2 max) {
-    Rect2 result;
+static inline rect2
+rect2minmax(vec2 min, vec2 max) {
+    rect2 result;
 
     result.min = min;
     result.max = max;
@@ -66,59 +62,69 @@ rect2_with_min_max(Vec2 min, Vec2 max) {
 }
 
 typedef struct {
+    SDL_Renderer *renderer;
     SDL_Texture *texture;
-    uint32_t *buf;
-    uint32_t width;
-    uint32_t height;
-} RenderContext;
+    u32 *buf;
+    u32 width;
+    u32 height;
+} render_context;
 
 static void
-copy_pixels_to_texture(RenderContext *ctx, SDL_Texture *texture) {
+copy_pixels_to_texture(render_context *ctx) {
     void *pixels;
     int pitch;
     SDL_LockTexture(ctx->texture, 0, &pixels, &pitch);
 
-    uint32_t *src = ctx->buf;
-    uint8_t *row = pixels;
-    for (uint32_t y = 0; y < ctx->height; ++y) {
-        uint32_t *dst = (uint32_t *) row;
-        for (uint32_t x = 0; x < ctx->width; ++x) {
+    u32 *src = ctx->buf;
+    u8 *row = pixels;
+    for (u32 y = 0; y < ctx->height; ++y) {
+        u32 *dst = (u32 *) row;
+        for (u32 x = 0; x < ctx->width; ++x) {
             *dst++ = *src++;
         }
         row += pitch;
     }
 
-    SDL_UnlockTexture(texture);
+    SDL_UnlockTexture(ctx->texture);
 }
 
-static uint32_t
-rgba_to_uint32(Vec4 color) {
-    uint8_t r = (uint8_t) (color.r * 255.0f);
-    uint8_t g = (uint8_t) (color.g * 255.0f);
-    uint8_t b = (uint8_t) (color.b * 255.0f);
-    uint8_t a = (uint8_t) (color.a * 255.0f);
+static inline u32
+rgba_to_uint32(vec4 color) {
+    u8 r = (u8) (color.r * 255.0f);
+    u8 g = (u8) (color.g * 255.0f);
+    u8 b = (u8) (color.b * 255.0f);
+    u8 a = (u8) (color.a * 255.0f);
 
     // 0xRRGGBBAA
-    uint32_t result = (r << 24) | (g << 16) | (b << 8) | (a << 0);
+    u32 result = (r << 24) | (g << 16) | (b << 8) | (a << 0);
     return result;
 }
 
 static void
-draw_rect(RenderContext *ctx, Rect2 rect, Vec4 rgba) {
-    uint32_t minx = (uint8_t) (rect.min.x);
-    uint32_t miny = (uint8_t) (rect.min.y);
-    uint32_t maxx = (uint8_t) (rect.max.x);
-    uint32_t maxy = (uint8_t) (rect.max.y);
+render_rect(render_context *ctx, rect2 rect, vec4 rgba) {
+    u32 minx = (u8) (rect.min.x);
+    u32 miny = (u8) (rect.min.y);
+    u32 maxx = (u8) (rect.max.x);
+    u32 maxy = (u8) (rect.max.y);
 
-    uint32_t color = rgba_to_uint32(rgba);
-    uint32_t *row = ctx->buf + (miny * ctx->width) + minx;
-    for (uint32_t y = miny; y < maxy; ++y) {
-        uint32_t *pixel = row;
-        for (uint32_t x = minx; x < maxx; ++x) {
+    u32 color = rgba_to_uint32(rgba);
+    u32 *row = ctx->buf + (miny * ctx->width) + minx;
+    for (u32 y = miny; y < maxy; ++y) {
+        u32 *pixel = row;
+        for (u32 x = minx; x < maxx; ++x) {
             *pixel++ = color;
         }
         row += ctx->width;
     }
+}
+
+static void
+render_to_screen(render_context *ctx) {
+    copy_pixels_to_texture(ctx);
+    memset(ctx->buf, 0, sizeof(*ctx->buf) * ctx->width * ctx->height);
+
+    SDL_RenderCopy(ctx->renderer, ctx->texture, 0, 0);
+    SDL_RenderPresent(ctx->renderer);
 }
 
 int
@@ -130,8 +136,8 @@ main(void) {
         return 1;
     }
 
-    uint32_t window_w = 800;
-    uint32_t window_h = 600;
+    u32 window_w = 800;
+    u32 window_h = 600;
 
     // NOTE: On Apple's OS X you must set the NSHighResolutionCapable
     // Info.plist property to YES, otherwise you will not receive a
@@ -141,7 +147,7 @@ main(void) {
                                           SDL_WINDOWPOS_CENTERED,
                                           window_w, window_h,
                                           SDL_WINDOW_OPENGL);
-    if (window == NULL) {
+    if (!window) {
         logerr("Failed to create window: %s\n", SDL_GetError());
         return 1;
     }
@@ -158,27 +164,28 @@ main(void) {
                                              SDL_PIXELFORMAT_RGBA8888,
                                              SDL_TEXTUREACCESS_STREAMING,
                                              window_w, window_h);
-    uint32_t buffer[window_w * window_h];
+    u32 buffer[window_w * window_h];
     memset(buffer, 0, sizeof(buffer));
 
-    RenderContext ctx;
+    render_context ctx;
+    ctx.renderer = renderer;
     ctx.texture = texture;
     ctx.buf = buffer;
     ctx.width = window_w;
     ctx.height = window_h;
 
-    bool quit = false;
+    i32 quit = 0;
     while (!quit) {
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_QUIT: {
-                    quit = true;
+                    quit = 1;
                 } break;
 
                 case SDL_KEYDOWN: {
                     if (e.key.keysym.sym == SDLK_ESCAPE) {
-                        quit = true;
+                        quit = 1;
                     }
                 } break;
 
@@ -186,11 +193,9 @@ main(void) {
             }
         }
 
-        draw_rect(&ctx, rect2_with_min_max(vec2(0, 0), vec2(100, 100)), rgba(1.0f, 1.0f, 1.0f, 1.0f));
+        render_rect(&ctx, rect2minmax(vec2xy(0, 0), vec2xy(100, 100)), rgba(1.0f, 1.0f, 1.0f, 1.0f));
 
-        copy_pixels_to_texture(&ctx, texture);
-        SDL_RenderCopy(renderer, texture, 0, 0);
-        SDL_RenderPresent(renderer);
+        render_to_screen(&ctx);
     }
 
     SDL_DestroyTexture(texture);
