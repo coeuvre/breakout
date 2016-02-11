@@ -1,130 +1,13 @@
 #include "breakout.h"
-
-typedef union {
-    struct {
-        f32 x;
-        f32 y;
-    };
-
-    struct {
-        f32 u;
-        f32 v;
-    };
-} vec2;
-
-static inline vec2
-vec2xy(f32 x, f32 y) {
-    vec2 result = {x, y};
-    return result;
-}
-
-typedef union {
-    struct {
-        f32 x;
-        f32 y;
-        f32 z;
-        f32 w;
-    };
-
-    struct {
-        f32 r;
-        f32 g;
-        f32 b;
-        f32 a;
-    };
-} vec4;
-
-static inline vec4
-rgba(f32 r, f32 g, f32 b, f32 a) {
-    vec4 result;
-
-    result.r = r;
-    result.g = g;
-    result.b = b;
-    result.a = a;
-
-    return result;
-}
-
-typedef struct {
-    vec2 min;
-    vec2 max;
-} rect2;
-
-static inline rect2
-rect2minmax(vec2 min, vec2 max) {
-    rect2 result;
-
-    result.min = min;
-    result.max = max;
-
-    return result;
-}
-
-typedef struct {
-    SDL_Renderer *renderer;
-    SDL_Texture *texture;
-    u32 *buf;
-    u32 width;
-    u32 height;
-} render_context;
+#include "renderer.c"
 
 static void
-copy_pixels_to_texture(render_context *ctx) {
-    void *pixels;
-    int pitch;
-    SDL_LockTexture(ctx->texture, 0, &pixels, &pitch);
-
-    u32 *src = ctx->buf;
-    u8 *row = pixels;
-    for (u32 y = 0; y < ctx->height; ++y) {
-        u32 *dst = (u32 *) row;
-        for (u32 x = 0; x < ctx->width; ++x) {
-            *dst++ = *src++;
-        }
-        row += pitch;
-    }
-
-    SDL_UnlockTexture(ctx->texture);
-}
-
-static inline u32
-rgba_to_uint32(vec4 color) {
-    u8 r = (u8) (color.r * 255.0f);
-    u8 g = (u8) (color.g * 255.0f);
-    u8 b = (u8) (color.b * 255.0f);
-    u8 a = (u8) (color.a * 255.0f);
-
-    // 0xRRGGBBAA
-    u32 result = (r << 24) | (g << 16) | (b << 8) | (a << 0);
-    return result;
+update(f32 dt) {
 }
 
 static void
-render_rect(render_context *ctx, rect2 rect, vec4 rgba) {
-    u32 minx = (u8) (rect.min.x);
-    u32 miny = (u8) (rect.min.y);
-    u32 maxx = (u8) (rect.max.x);
-    u32 maxy = (u8) (rect.max.y);
-
-    u32 color = rgba_to_uint32(rgba);
-    u32 *row = ctx->buf + (miny * ctx->width) + minx;
-    for (u32 y = miny; y < maxy; ++y) {
-        u32 *pixel = row;
-        for (u32 x = minx; x < maxx; ++x) {
-            *pixel++ = color;
-        }
-        row += ctx->width;
-    }
-}
-
-static void
-render_to_screen(render_context *ctx) {
-    copy_pixels_to_texture(ctx);
-    memset(ctx->buf, 0, sizeof(*ctx->buf) * ctx->width * ctx->height);
-
-    SDL_RenderCopy(ctx->renderer, ctx->texture, 0, 0);
-    SDL_RenderPresent(ctx->renderer);
+render(render_context *ctx) {
+    render_rect(ctx, rect2minmax(vec2xy(0, 0), vec2xy(100, 100)), rgba(1.0f, 1.0f, 1.0f, 1.0f));
 }
 
 int
@@ -174,8 +57,13 @@ main(void) {
     ctx.width = window_w;
     ctx.height = window_h;
 
+    f32 dt = 1.0f / 60.0f;
+    u32 target_frametime = dt * 1000.0f;
+
     i32 quit = 0;
     while (!quit) {
+        u32 frame_begin = SDL_GetTicks();
+
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
@@ -193,9 +81,19 @@ main(void) {
             }
         }
 
-        render_rect(&ctx, rect2minmax(vec2xy(0, 0), vec2xy(100, 100)), rgba(1.0f, 1.0f, 1.0f, 1.0f));
+        update(dt);
+
+        render(&ctx);
+
+        u32 frametime = SDL_GetTicks() - frame_begin;
+        //printf("%u\n", frametime);
 
         render_to_screen(&ctx);
+
+        frametime = SDL_GetTicks() - frame_begin;
+        if (target_frametime > frametime) {
+            SDL_Delay(target_frametime - frametime);
+        }
     }
 
     SDL_DestroyTexture(texture);
