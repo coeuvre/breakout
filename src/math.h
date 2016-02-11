@@ -24,6 +24,11 @@ vec2xy(f32 x, f32 y) {
 }
 
 static inline vec2
+vec2zero() {
+    return vec2xy(0.0f, 0.0f);
+}
+
+static inline vec2
 vec2add(vec2 l, vec2 r) {
     vec2 result;
 
@@ -53,21 +58,88 @@ vec2mul(f32 l, vec2 r) {
     return result;
 }
 
-typedef union {
-    struct {
-        f32 x;
-        f32 y;
-        f32 z;
-        f32 w;
-    };
+static inline f32
+vec2dot(vec2 l, vec2 r) {
+    f32 result = l.x * r.x + l.y * r.y;
+    return result;
+}
 
-    struct {
-        f32 r;
-        f32 g;
-        f32 b;
-        f32 a;
-    };
-} vec4;
+typedef struct {
+    i32 has;
+    f32 x;
+    f32 y;
+} LinearSystem2Solution;
+
+static inline LinearSystem2Solution
+solve_linear_system2(vec2 a, vec2 b, vec2 c) {
+    LinearSystem2Solution result = {};
+
+    f32 d = a.x * b.y - a.y * b.x;
+
+    if (d != 0.0f) {
+        result.has = 1;
+        vec2 solution = vec2xy((c.x * b.y - c.y * b.x) / d,
+                               (a.x * c.y - a.y * c.x) / d);
+        result.x = solution.x;
+        result.y = solution.y;
+    }
+
+    return result;
+}
+
+typedef struct {
+    vec2 a;
+    vec2 b;
+} line2;
+
+static inline line2
+line2ab(vec2 a, vec2 b) {
+    line2 result;
+
+    result.a = a;
+    result.b = b;
+
+    return result;
+}
+
+typedef struct {
+    vec2 o;
+    vec2 d;
+} ray2;
+
+typedef struct {
+    i32 has;
+    f32 t;
+} Intersection;
+
+static inline Intersection
+ray2_line2_intersection_test(ray2 ray, line2 line) {
+    Intersection result = {};
+
+    vec2 a = ray.d;
+    vec2 b = vec2sub(line.a, line.b);
+    vec2 c = vec2sub(line.a, ray.o);
+
+    LinearSystem2Solution solution = solve_linear_system2(a, b, c);
+    if (solution.has && solution.y >= 0 && solution.y <= 1.0 &&
+        solution.x >= 0.0)
+    {
+        result.has = 1;
+        result.t = solution.x;
+    }
+
+    return result;
+}
+
+static inline ray2
+ray2od(vec2 o, vec2 d) {
+    ray2 result;
+
+    result.o = o;
+    result.d = d;
+
+    return result;
+}
 
 typedef struct {
     vec2 min;
@@ -117,5 +189,21 @@ get_rect2_size(rect2 rect) {
     vec2 result = vec2sub(rect.max, rect.min);
     return result;
 }
+
+typedef union {
+    struct {
+        f32 x;
+        f32 y;
+        f32 z;
+        f32 w;
+    };
+
+    struct {
+        f32 r;
+        f32 g;
+        f32 b;
+        f32 a;
+    };
+} vec4;
 
 #endif
