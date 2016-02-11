@@ -6,12 +6,14 @@ copy_pixels_to_texture(render_context *ctx) {
 
     u32 *src = ctx->buf;
     u8 *row = pixels;
+    // last row
+    row = row + pitch * (ctx->height - 1);
     for (u32 y = 0; y < ctx->height; ++y) {
         u32 *dst = (u32 *) row;
         for (u32 x = 0; x < ctx->width; ++x) {
             *dst++ = *src++;
         }
-        row += pitch;
+        row -= pitch;
     }
 
     SDL_UnlockTexture(ctx->texture);
@@ -31,10 +33,15 @@ rgba_to_uint32(vec4 color) {
 
 static void
 render_rect(render_context *ctx, rect2 rect, vec4 rgba) {
-    u32 minx = (u8) (rect.min.x);
-    u32 miny = (u8) (rect.min.y);
-    u32 maxx = (u8) (rect.max.x);
-    u32 maxy = (u8) (rect.max.y);
+    i32 minx = (i32) (rect.min.x);
+    i32 miny = (i32) (rect.min.y);
+    i32 maxx = (i32) (rect.max.x);
+    i32 maxy = (i32) (rect.max.y);
+
+    if (minx < 0) { minx = 0; }
+    if (maxx >= ctx->width) { maxx = ctx->width; }
+    if (miny < 0) { miny = 0; }
+    if (maxy >= ctx->height) { maxy = ctx->height; }
 
     u32 color = rgba_to_uint32(rgba);
     u32 *row = ctx->buf + (miny * ctx->width) + minx;
