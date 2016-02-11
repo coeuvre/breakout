@@ -5,8 +5,8 @@ typedef struct {
     SDL_Renderer *renderer;
     SDL_Texture *texture;
     u32 *buf;
-    u32 width;
-    u32 height;
+    i32 width;
+    i32 height;
 } RenderContext;
 
 static inline vec4

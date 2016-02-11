@@ -64,6 +64,12 @@ vec2dot(vec2 l, vec2 r) {
     return result;
 }
 
+static inline f32
+vec2lensq(vec2 v) {
+    f32 result = vec2dot(v, v);
+    return result;
+}
+
 typedef struct {
     i32 has;
     f32 x;

@@ -81,66 +81,65 @@ typedef struct {
 static void
 move_entity(GameState *gamestate, Entity *entity, f32 dt) {
     vec2 dp = vec2mul(dt, entity->vel);
-    f32 mint = 1.0;
-    vec2 normal = vec2zero();
 
-    if (entity->type == ENTITY_TYPE_BALL) {
-        int break_here = 5;
-    }
+    for (int iteration = 0; vec2lensq(dp) > 0.0f && iteration < 4; ++iteration) {
+        f32 mint = 1.0;
+        vec2 targetp = vec2add(entity->pos, dp);
+        vec2 normal = vec2zero();
+        Entity *hit_entity = 0;
 
-    for (int entity_index = 0; entity_index < gamestate->entity_count; ++entity_index) {
-        Entity *test_entity = gamestate->entities + entity_index;
+        for (int entity_index = 0; entity_index < gamestate->entity_count; ++entity_index) {
+            Entity *test_entity = gamestate->entities + entity_index;
 
-        if (entity == test_entity) {
-            continue;
-        }
+            if (entity == test_entity) {
+                continue;
+            }
 
-        vec2 minkowski_size = vec2add(entity->size, test_entity->size);
-        rect2 bound = rect2censize(vec2zero(), minkowski_size);
-        vec2 rel = vec2sub(entity->pos, test_entity->pos);
-        ray2 motion = ray2od(rel, dp);
-        TestLine2 test_lines[] = {
-            // Top
-            { line2ab(vec2xy(bound.min.x, bound.max.y), bound.max), vec2xy(0.0f, 1.0f) },
-            // Right
-            { line2ab(vec2xy(bound.max.x, bound.min.y), bound.max), vec2xy(1.0f, 0.0f) },
-            // Left
-            { line2ab(bound.min, vec2xy(bound.min.x, bound.max.y)), vec2xy(-1.0f, 0.0f) },
-            // Bottom
-            { line2ab(bound.min, vec2xy(bound.max.x, bound.min.y)), vec2xy(0.0f, -1.0f) },
-        };
+            vec2 minkowski_size = vec2add(entity->size, test_entity->size);
+            rect2 bound = rect2censize(vec2zero(), minkowski_size);
+            vec2 rel = vec2sub(entity->pos, test_entity->pos);
+            ray2 motion = ray2od(rel, dp);
+            TestLine2 test_lines[] = {
+                // Top
+                { line2ab(vec2xy(bound.min.x, bound.max.y), bound.max), vec2xy(0.0f, 1.0f) },
+                // Right
+                { line2ab(vec2xy(bound.max.x, bound.min.y), bound.max), vec2xy(1.0f, 0.0f) },
+                // Left
+                { line2ab(bound.min, vec2xy(bound.min.x, bound.max.y)), vec2xy(-1.0f, 0.0f) },
+                // Bottom
+                { line2ab(bound.min, vec2xy(bound.max.x, bound.min.y)), vec2xy(0.0f, -1.0f) },
+            };
 
-        for (int line_index = 0; line_index < count(test_lines); ++line_index) {
-            TestLine2 *test_line = test_lines + line_index;
-            Intersection intersection = ray2_line2_intersection_test(motion, test_line->line);
-            if (intersection.has) {
-                if (intersection.t > 0.0f && intersection.t < mint) {
-                    mint = intersection.t;
-                    normal = test_line->normal;
+            for (int line_index = 0; line_index < count(test_lines); ++line_index) {
+                TestLine2 *test_line = test_lines + line_index;
+                if (vec2dot(dp, test_line->normal) < 0.0f) {
+                    Intersection intersection = ray2_line2_intersection_test(motion, test_line->line);
+                    if (intersection.has) {
+                        if (intersection.t < mint) {
+                            hit_entity = test_entity;
+                            mint = intersection.t;
+                            normal = test_line->normal;
+                        }
+                    }
                 }
             }
         }
-    }
 
-    vec2 targetp = vec2add(entity->pos, dp);
+        entity->pos = vec2add(entity->pos, vec2mul(mint, dp));
 
-    entity->pos = vec2add(entity->pos, vec2mul(mint, dp));
-
-    if (mint < 1.0) {
         dp = vec2sub(targetp, entity->pos);
-        // dp = dp - 2.0f * dp * normal * normal;
-        dp = vec2sub(dp, vec2mul(2.0f, vec2mul(vec2dot(dp, normal), normal)));
-        entity->pos = vec2add(entity->pos, dp);
 
-        // entity->vel = entity->vel - 2.0f * entity->vel * normal * normal;
-        entity->vel = vec2sub(
-            entity->vel,
-            vec2mul(2.0f, vec2mul(vec2dot(entity->vel, normal), normal))
-        );
-    }
+        if (hit_entity) {
+            // dp = dp - 2.0f * dp * normal * normal;
+            dp = vec2sub(dp, vec2mul(2.0f, vec2mul(vec2dot(dp, normal), normal)));
+            entity->pos = vec2add(entity->pos, dp);
 
-    if (entity->type == ENTITY_TYPE_BALL) {
-        /*printf("%f, (%f, %f)\n", mint, entity->pos.x, entity->pos.y);*/
+            // entity->vel = entity->vel - 2.0f * entity->vel * normal * normal;
+            entity->vel = vec2sub(
+                entity->vel,
+                vec2mul(2.0f, vec2mul(vec2dot(entity->vel, normal), normal))
+            );
+        }
     }
 }
 
@@ -213,8 +212,8 @@ main(void) {
         return 1;
     }
 
-    u32 window_w = 800;
-    u32 window_h = 600;
+    i32 window_w = 800;
+    i32 window_h = 600;
 
     // On Apple's OS X you must set the NSHighResolutionCapable
     // Info.plist property to YES, otherwise you will not receive a
@@ -255,11 +254,11 @@ main(void) {
     init(&gamestate);
 
     f32 dt = 1.0f / 60.0f;
-    u32 target_frametime = dt * 1000.0f;
+    //u32 target_frametime = dt * 1000.0f;
 
     i32 quit = 0;
     while (!quit) {
-        u32 frame_begin = SDL_GetTicks();
+        //u32 frame_begin = SDL_GetTicks();
 
         SDL_Event e;
         while (SDL_PollEvent(&e)) {
@@ -282,15 +281,17 @@ main(void) {
 
         update_and_render(&gamestate, &ctx, dt);
 
-        u32 frametime = SDL_GetTicks() - frame_begin;
+        //u32 frametime = SDL_GetTicks() - frame_begin;
         //printf("%u\n", frametime);
 
         render_to_screen(&ctx);
 
+#if 0
         frametime = SDL_GetTicks() - frame_begin;
         if (target_frametime > frametime) {
             SDL_Delay(target_frametime - frametime);
         }
+#endif
     }
 
     SDL_DestroyTexture(texture);

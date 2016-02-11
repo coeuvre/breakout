@@ -45,9 +45,9 @@ render_rect(RenderContext *ctx, rect2 rect, vec4 rgba) {
 
     u32 color = rgba_to_uint32(rgba);
     u32 *row = ctx->buf + (miny * ctx->width) + minx;
-    for (u32 y = miny; y < maxy; ++y) {
+    for (i32 y = miny; y < maxy; ++y) {
         u32 *pixel = row;
-        for (u32 x = minx; x < maxx; ++x) {
+        for (i32 x = minx; x < maxx; ++x) {
             *pixel++ = color;
         }
         row += ctx->width;
