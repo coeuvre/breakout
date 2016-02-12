@@ -7,7 +7,7 @@ typedef struct {
     u32 *buf;
     i32 width;
     i32 height;
-} RenderContext;
+} render_context;
 
 static inline vec4
 rgba(f32 r, f32 g, f32 b, f32 a) {

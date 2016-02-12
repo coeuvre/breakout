@@ -1,5 +1,5 @@
 static void
-copy_pixels_to_texture(RenderContext *ctx) {
+copy_pixels_to_texture(render_context *ctx) {
     void *pixels;
     int pitch;
     SDL_LockTexture(ctx->texture, 0, &pixels, &pitch);
@@ -32,7 +32,7 @@ rgba_to_uint32(vec4 color) {
 }
 
 static void
-render_rect(RenderContext *ctx, rect2 rect, vec4 rgba) {
+render_rect(render_context *ctx, rect2 rect, vec4 rgba) {
     i32 minx = (i32) (rect.min.x);
     i32 miny = (i32) (rect.min.y);
     i32 maxx = (i32) (rect.max.x);
@@ -55,7 +55,7 @@ render_rect(RenderContext *ctx, rect2 rect, vec4 rgba) {
 }
 
 static void
-render_to_screen(RenderContext *ctx) {
+render_to_screen(render_context *ctx) {
     copy_pixels_to_texture(ctx);
     memset(ctx->buf, 0, sizeof(*ctx->buf) * ctx->width * ctx->height);
 

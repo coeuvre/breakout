@@ -14,7 +14,7 @@ typedef union {
 } vec2;
 
 static inline vec2
-vec2xy(f32 x, f32 y) {
+v2(f32 x, f32 y) {
     vec2 result;
 
     result.x = x;
@@ -24,12 +24,12 @@ vec2xy(f32 x, f32 y) {
 }
 
 static inline vec2
-vec2zero() {
-    return vec2xy(0.0f, 0.0f);
+v2zero() {
+    return v2(0.0f, 0.0f);
 }
 
 static inline vec2
-vec2add(vec2 l, vec2 r) {
+v2add(vec2 l, vec2 r) {
     vec2 result;
 
     result.x = l.x + r.x;
@@ -39,7 +39,7 @@ vec2add(vec2 l, vec2 r) {
 }
 
 static inline vec2
-vec2sub(vec2 l, vec2 r) {
+v2sub(vec2 l, vec2 r) {
     vec2 result;
 
     result.x = l.x - r.x;
@@ -49,7 +49,7 @@ vec2sub(vec2 l, vec2 r) {
 }
 
 static inline vec2
-vec2mul(f32 l, vec2 r) {
+v2mul(f32 l, vec2 r) {
     vec2 result;
 
     result.x = l * r.x;
@@ -59,14 +59,14 @@ vec2mul(f32 l, vec2 r) {
 }
 
 static inline f32
-vec2dot(vec2 l, vec2 r) {
+v2dot(vec2 l, vec2 r) {
     f32 result = l.x * r.x + l.y * r.y;
     return result;
 }
 
 static inline f32
-vec2lensq(vec2 v) {
-    f32 result = vec2dot(v, v);
+v2lensq(vec2 v) {
+    f32 result = v2dot(v, v);
     return result;
 }
 
@@ -74,18 +74,18 @@ typedef struct {
     i32 has;
     f32 x;
     f32 y;
-} LinearSystem2Solution;
+} linear_system2_solution;
 
-static inline LinearSystem2Solution
+static inline linear_system2_solution
 solve_linear_system2(vec2 a, vec2 b, vec2 c) {
-    LinearSystem2Solution result = {};
+    linear_system2_solution result = {};
 
     f32 d = a.x * b.y - a.y * b.x;
 
     if (d != 0.0f) {
         result.has = 1;
-        vec2 solution = vec2xy((c.x * b.y - c.y * b.x) / d,
-                               (a.x * c.y - a.y * c.x) / d);
+        vec2 solution = v2((c.x * b.y - c.y * b.x) / d,
+                           (a.x * c.y - a.y * c.x) / d);
         result.x = solution.x;
         result.y = solution.y;
     }
@@ -116,17 +116,17 @@ typedef struct {
 typedef struct {
     i32 has;
     f32 t;
-} Intersection;
+} intersection;
 
-static inline Intersection
+static inline intersection
 ray2_line2_intersection_test(ray2 ray, line2 line) {
-    Intersection result = {};
+    intersection result = {};
 
     vec2 a = ray.d;
-    vec2 b = vec2sub(line.a, line.b);
-    vec2 c = vec2sub(line.a, ray.o);
+    vec2 b = v2sub(line.a, line.b);
+    vec2 c = v2sub(line.a, ray.o);
 
-    LinearSystem2Solution solution = solve_linear_system2(a, b, c);
+    linear_system2_solution solution = solve_linear_system2(a, b, c);
     if (solution.has && solution.y >= 0 && solution.y <= 1.0 &&
         solution.x >= 0.0)
     {
@@ -167,7 +167,7 @@ rect2minsize(vec2 min, vec2 size) {
     rect2 result;
 
     result.min = min;
-    result.max = vec2add(min, size);
+    result.max = v2add(min, size);
 
     return result;
 }
@@ -176,9 +176,9 @@ static inline rect2
 rect2censize(vec2 cen, vec2 size) {
     rect2 result;
 
-    vec2 halfsize = vec2mul(0.5f, size);
-    result.min = vec2sub(cen, halfsize);
-    result.max = vec2add(cen, halfsize);
+    vec2 halfsize = v2mul(0.5f, size);
+    result.min = v2sub(cen, halfsize);
+    result.max = v2add(cen, halfsize);
 
     return result;
 }
@@ -186,13 +186,13 @@ rect2censize(vec2 cen, vec2 size) {
 static inline vec2
 get_rect2_cen(rect2 rect) {
     // rect.min + 0.5f * (rect.max - rect.min)
-    vec2 result = vec2add(rect.min, vec2mul(0.5f, vec2sub(rect.max, rect.min)));
+    vec2 result = v2add(rect.min, v2mul(0.5f, v2sub(rect.max, rect.min)));
     return result;
 }
 
 static inline vec2
 get_rect2_size(rect2 rect) {
-    vec2 result = vec2sub(rect.max, rect.min);
+    vec2 result = v2sub(rect.max, rect.min);
     return result;
 }
 
