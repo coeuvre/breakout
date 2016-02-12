@@ -184,14 +184,14 @@ rect2censize(vec2 cen, vec2 size) {
 }
 
 static inline vec2
-get_rect2_cen(rect2 rect) {
+getrect2cen(rect2 rect) {
     // rect.min + 0.5f * (rect.max - rect.min)
     vec2 result = v2add(rect.min, v2mul(0.5f, v2sub(rect.max, rect.min)));
     return result;
 }
 
 static inline vec2
-get_rect2_size(rect2 rect) {
+getrect2size(rect2 rect) {
     vec2 result = v2sub(rect.max, rect.min);
     return result;
 }

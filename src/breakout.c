@@ -46,29 +46,29 @@ add_entity(game_state *game_state, entity_type type, vec2 pos) {
 
 static add_entity_result
 add_block(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BLOCK, get_rect2_cen(rect));
-    result.entity->size = get_rect2_size(rect);
+    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BLOCK, getrect2cen(rect));
+    result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
 add_wall(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_WALL, get_rect2_cen(rect));
-    result.entity->size = get_rect2_size(rect);
+    add_entity_result result = add_entity(game_state, ENTITY_TYPE_WALL, getrect2cen(rect));
+    result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
 add_paddle(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_PADDLE, get_rect2_cen(rect));
-    result.entity->size = get_rect2_size(rect);
+    add_entity_result result = add_entity(game_state, ENTITY_TYPE_PADDLE, getrect2cen(rect));
+    result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
 add_ball(game_state *game_state, rect2 rect, vec2 vel) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BALL, get_rect2_cen(rect));
-    result.entity->size = get_rect2_size(rect);
+    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BALL, getrect2cen(rect));
+    result.entity->size = getrect2size(rect);
     result.entity->vel = vel;
     return result;
 }
