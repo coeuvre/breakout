@@ -15,17 +15,17 @@ typedef struct {
     vec2 pos;
     vec2 size;
     vec2 vel;
-} game_entity;
+} entity;
 
 typedef struct {
     u32 entity_count;
-    game_entity entities[MAX_ENTITY_COUNT];
+    entity entities[MAX_ENTITY_COUNT];
 
     u32 player_paddle_index;
 } game_state;
 
 typedef struct {
-    game_entity *entity;
+    entity *entity;
     u32 index;
 } add_entity_result;
 
@@ -34,7 +34,7 @@ add_entity(game_state *game_state, entity_type type, vec2 pos) {
     assert(game_state->entity_count < count(game_state->entities));
 
     u32 index = game_state->entity_count++;
-    game_entity *entity = game_state->entities + index;
+    entity *entity = game_state->entities + index;
     entity->type = type;
     entity->pos = pos;
 
@@ -76,30 +76,30 @@ add_ball(game_state *game_state, rect2 rect, vec2 vel) {
 typedef struct {
     line2 line;
     vec2 normal;
-} TestLine2;
+} test_line;
 
 static void
-move_entity(game_state *game_state, game_entity *entity, f32 dt) {
-    vec2 dp = v2mul(dt, entity->vel);
+move_entity(game_state *game_state, entity *mover, f32 dt) {
+    vec2 dp = v2mul(dt, mover->vel);
 
     for (int iteration = 0; v2lensq(dp) > 0.0f && iteration < 4; ++iteration) {
         f32 mint = 1.0;
-        vec2 targetp = v2add(entity->pos, dp);
+        vec2 targetp = v2add(mover->pos, dp);
         vec2 normal = v2zero();
-        game_entity *hit_entity = 0;
+        entity *hit_entity = 0;
 
         for (int entity_index = 0; entity_index < game_state->entity_count; ++entity_index) {
-            game_entity *test_entity = game_state->entities + entity_index;
+            entity *test_entity = game_state->entities + entity_index;
 
-            if (entity == test_entity) {
+            if (mover == test_entity) {
                 continue;
             }
 
-            vec2 minkowski_size = v2add(entity->size, test_entity->size);
+            vec2 minkowski_size = v2add(mover->size, test_entity->size);
             rect2 bound = rect2censize(v2zero(), minkowski_size);
-            vec2 rel = v2sub(entity->pos, test_entity->pos);
+            vec2 rel = v2sub(mover->pos, test_entity->pos);
             ray2 motion = ray2od(rel, dp);
-            TestLine2 test_lines[] = {
+            test_line test_lines[] = {
                 // Top
                 { line2ab(v2(bound.min.x, bound.max.y), bound.max), v2(0.0f, 1.0f) },
                 // Right
@@ -111,7 +111,7 @@ move_entity(game_state *game_state, game_entity *entity, f32 dt) {
             };
 
             for (int line_index = 0; line_index < count(test_lines); ++line_index) {
-                TestLine2 *test_line = test_lines + line_index;
+                test_line *test_line = test_lines + line_index;
                 if (v2dot(dp, test_line->normal) < 0.0f) {
                     intersection intersection = ray2_line2_intersection_test(motion, test_line->line);
                     if (intersection.has) {
@@ -125,19 +125,19 @@ move_entity(game_state *game_state, game_entity *entity, f32 dt) {
             }
         }
 
-        entity->pos = v2add(entity->pos, v2mul(mint, dp));
+        mover->pos = v2add(mover->pos, v2mul(mint, dp));
 
-        dp = v2sub(targetp, entity->pos);
+        dp = v2sub(targetp, mover->pos);
 
         if (hit_entity) {
             // dp = dp - 2.0f * dp * normal * normal;
             dp = v2sub(dp, v2mul(2.0f, v2mul(v2dot(dp, normal), normal)));
-            entity->pos = v2add(entity->pos, dp);
+            mover->pos = v2add(mover->pos, dp);
 
-            // entity->vel = entity->vel - 2.0f * entity->vel * normal * normal;
-            entity->vel = v2sub(
-                entity->vel,
-                v2mul(2.0f, v2mul(v2dot(entity->vel, normal), normal))
+            // mover->vel = mover->vel - 2.0f * mover->vel * normal * normal;
+            mover->vel = v2sub(
+                mover->vel,
+                v2mul(2.0f, v2mul(v2dot(mover->vel, normal), normal))
             );
         }
     }
@@ -185,7 +185,7 @@ static void
 handle_event(game_state *game_state, SDL_Event *e) {
     switch (e->type) {
         case SDL_MOUSEMOTION: {
-            game_entity *paddle = game_state->entities + game_state->player_paddle_index;
+            entity *paddle = game_state->entities + game_state->player_paddle_index;
             paddle->pos.x = e->motion.x;
         } break;
         default: break;
@@ -195,7 +195,7 @@ handle_event(game_state *game_state, SDL_Event *e) {
 static void
 update_and_render(game_state *game_state, render_context *ctx, f32 dt) {
     for (int i = 0; i < game_state->entity_count; ++i) {
-        game_entity *entity = game_state->entities + i;
+        entity *entity = game_state->entities + i;
 
         move_entity(game_state, entity, dt);
 
