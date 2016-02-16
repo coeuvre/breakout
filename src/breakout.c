@@ -30,11 +30,11 @@ typedef struct {
 } add_entity_result;
 
 static add_entity_result
-add_entity(game_state *game_state, entity_type type, vec2 pos) {
-    assert(game_state->entity_count < count(game_state->entities));
+add_entity(game_state *gs, entity_type type, vec2 pos) {
+    assert(gs->entity_count < count(gs->entities));
 
-    u32 index = game_state->entity_count++;
-    entity *entity = game_state->entities + index;
+    u32 index = gs->entity_count++;
+    entity *entity = gs->entities + index;
     entity->type = type;
     entity->pos = pos;
 
@@ -44,30 +44,35 @@ add_entity(game_state *game_state, entity_type type, vec2 pos) {
     return result;
 }
 
+static void
+remove_entity(game_state *gs, u32 entity_index) {
+    gs->entities[entity_index] = gs->entities[--gs->entity_count];
+}
+
 static add_entity_result
-add_block(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BLOCK, getrect2cen(rect));
+add_block(game_state *gs, rect2 rect) {
+    add_entity_result result = add_entity(gs, ENTITY_TYPE_BLOCK, getrect2cen(rect));
     result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
-add_wall(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_WALL, getrect2cen(rect));
+add_wall(game_state *gs, rect2 rect) {
+    add_entity_result result = add_entity(gs, ENTITY_TYPE_WALL, getrect2cen(rect));
     result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
-add_paddle(game_state *game_state, rect2 rect) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_PADDLE, getrect2cen(rect));
+add_paddle(game_state *gs, rect2 rect) {
+    add_entity_result result = add_entity(gs, ENTITY_TYPE_PADDLE, getrect2cen(rect));
     result.entity->size = getrect2size(rect);
     return result;
 }
 
 static add_entity_result
-add_ball(game_state *game_state, rect2 rect, vec2 vel) {
-    add_entity_result result = add_entity(game_state, ENTITY_TYPE_BALL, getrect2cen(rect));
+add_ball(game_state *gs, rect2 rect, vec2 vel) {
+    add_entity_result result = add_entity(gs, ENTITY_TYPE_BALL, getrect2cen(rect));
     result.entity->size = getrect2size(rect);
     result.entity->vel = vel;
     return result;
@@ -79,17 +84,18 @@ typedef struct {
 } test_line;
 
 static void
-move_entity(game_state *game_state, entity *mover, f32 dt) {
+move_entity(game_state *gs, entity *mover, f32 dt) {
     vec2 dp = v2mul(dt, mover->vel);
 
-    for (int iteration = 0; v2lensq(dp) > 0.0f && iteration < 4; ++iteration) {
+    for (int iteration = 0; getv2lensq(dp) > 0.0f && iteration < 4; ++iteration) {
         f32 mint = 1.0;
         vec2 targetp = v2add(mover->pos, dp);
         vec2 normal = v2zero();
         entity *hit_entity = 0;
+        u32 hit_entity_index = 0;
 
-        for (int entity_index = 0; entity_index < game_state->entity_count; ++entity_index) {
-            entity *test_entity = game_state->entities + entity_index;
+        for (int entity_index = 0; entity_index < gs->entity_count; ++entity_index) {
+            entity *test_entity = gs->entities + entity_index;
 
             if (mover == test_entity) {
                 continue;
@@ -117,6 +123,7 @@ move_entity(game_state *game_state, entity *mover, f32 dt) {
                     if (intersection.has) {
                         if (intersection.t < mint) {
                             hit_entity = test_entity;
+                            hit_entity_index = entity_index;
                             mint = intersection.t;
                             normal = test_line->normal;
                         }
@@ -139,12 +146,16 @@ move_entity(game_state *game_state, entity *mover, f32 dt) {
                 mover->vel,
                 v2mul(2.0f, v2mul(v2dot(mover->vel, normal), normal))
             );
+
+            if (hit_entity->type == ENTITY_TYPE_BLOCK) {
+                /*remove_entity(gs, hit_entity_index);*/
+            }
         }
     }
 }
 
 static void
-init(game_state *game_state) {
+init(game_state *gs) {
     // Build blocks
     {
         vec2 margin = v2(100.0f, 300.0f);
@@ -153,7 +164,7 @@ init(game_state *game_state) {
         f32 padding = 10.0f;
         for (int y = 0; y < 8; ++y) {
             for (int x = 0; x < 10; ++x) {
-                add_block(game_state, rect2minsize(min, size));
+                add_block(gs, rect2minsize(min, size));
                 min.x += size.x + padding;
             }
             min.x = margin.x;
@@ -164,28 +175,27 @@ init(game_state *game_state) {
     // Build walls
     {
         // left
-        add_wall(game_state, rect2minsize(v2(0.0f, 0.0f), v2(15.0f, 600.0f)));
+        add_wall(gs, rect2minsize(v2(0.0f, 0.0f), v2(15.0f, 600.0f)));
         // top
-        add_wall(game_state, rect2minsize(v2(0.0f, 600.0f - 15.0f), v2(800.0f, 15.0f)));
+        add_wall(gs, rect2minsize(v2(0.0f, 600.0f - 15.0f), v2(800.0f, 15.0f)));
         // right
-        add_wall(game_state, rect2minsize(v2(800.0f - 15.0f, 0.0f), v2(15.0f, 600.0f)));
+        add_wall(gs, rect2minsize(v2(800.0f - 15.0f, 0.0f), v2(15.0f, 600.0f)));
         // down
-        add_wall(game_state, rect2minsize(v2(0.0f, -15.0f), v2(800.0f, 15.0f)));
+        add_wall(gs, rect2minsize(v2(0.0f, -15.0f), v2(800.0f, 15.0f)));
     }
 
-    game_state->player_paddle_index = add_paddle(
-        game_state,
-        rect2censize(v2(400.0f, 35.0f), v2(100.0f, 30.0f))
+    gs->player_paddle_index = add_paddle(
+        gs, rect2censize(v2(400.0f, 35.0f), v2(100.0f, 30.0f))
     ).index;
 
-    add_ball(game_state, rect2censize(v2(400.0f, 150.0f), v2(15.0f, 15.0f)), v2(150.0f, 150.0f));
+    add_ball(gs, rect2censize(v2(400.0f, 150.0f), v2(15.0f, 15.0f)), v2(150.0f, 150.0f));
 }
 
 static void
-handle_event(game_state *game_state, SDL_Event *e) {
+handle_event(game_state *gs, SDL_Event *e) {
     switch (e->type) {
         case SDL_MOUSEMOTION: {
-            entity *paddle = game_state->entities + game_state->player_paddle_index;
+            entity *paddle = gs->entities + gs->player_paddle_index;
             paddle->pos.x = e->motion.x;
         } break;
         default: break;
@@ -193,13 +203,13 @@ handle_event(game_state *game_state, SDL_Event *e) {
 }
 
 static void
-update_and_render(game_state *game_state, render_context *ctx, f32 dt) {
-    for (int i = 0; i < game_state->entity_count; ++i) {
-        entity *entity = game_state->entities + i;
+update_and_render(game_state *gs, render_context *ctx, f32 dt) {
+    for (int i = 0; i < gs->entity_count; ++i) {
+        entity *e = gs->entities + i;
 
-        move_entity(game_state, entity, dt);
+        move_entity(gs, e, dt);
 
-        render_rect(ctx, rect2censize(entity->pos, entity->size), rgba(1.0f, 1.0f, 1.0f, 1.0f));
+        render_rect(ctx, rect2censize(e->pos, e->size), rgba(1.0f, 1.0f, 1.0f, 1.0f));
     }
 }
 
@@ -250,8 +260,8 @@ main(void) {
     ctx.width = window_w;
     ctx.height = window_h;
 
-    game_state game_state = {};
-    init(&game_state);
+    game_state gs = {};
+    init(&gs);
 
     f32 dt = 1.0f / 60.0f;
     //u32 target_frametime = dt * 1000.0f;
@@ -276,10 +286,10 @@ main(void) {
                 default: break;
             }
 
-            handle_event(&game_state, &e);
+            handle_event(&gs, &e);
         }
 
-        update_and_render(&game_state, &ctx, dt);
+        update_and_render(&gs, &ctx, dt);
 
         //u32 frametime = SDL_GetTicks() - frame_begin;
         //printf("%u\n", frametime);

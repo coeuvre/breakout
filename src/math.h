@@ -65,7 +65,7 @@ v2dot(vec2 l, vec2 r) {
 }
 
 static inline f32
-v2lensq(vec2 v) {
+getv2lensq(vec2 v) {
     f32 result = v2dot(v, v);
     return result;
 }
