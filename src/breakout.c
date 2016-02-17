@@ -7,16 +7,19 @@ typedef enum {
     ENTITY_TYPE_BLOCK,
     ENTITY_TYPE_PADDLE,
     ENTITY_TYPE_BALL,
+    ENTITY_TYPE_BALL_TAIL,
     ENTITY_TYPE_WALL,
 } entity_type;
 
-typedef enum {
-    ENTITY_FLAG_DEAD = (1 << 0),
-} entity_flag;
+enum {
+    ENTITY_FLAG_REMOVED = (1 << 0),
+    ENTITY_FLAG_COLLIDE = (1 << 1),
+};
 
 typedef struct {
+    u32 index;
     entity_type type;
-    entity_flag flags;
+    u32 flags;
     vec2 pos;
     vec2 size;
     vec2 vel;
@@ -26,66 +29,102 @@ typedef struct {
     u32 entity_count;
     entity entities[MAX_ENTITY_COUNT];
 
-    u32 player_paddle_index;
+    u32 free_entity_index_count;
+    u32 free_entity_indices[MAX_ENTITY_COUNT];
+
+    entity *player_paddle;
 } game_state;
 
+static void
+init_game_state(game_state *gs) {
+    // NOTE: The entity index 0 is considerd null entity
+    for (u32 free_entity_index = MAX_ENTITY_COUNT - 1; free_entity_index != 0; --free_entity_index) {
+        gs->free_entity_indices[gs->free_entity_index_count++] = free_entity_index;
+    }
+}
+
+static u32
+next_free_entity_index(game_state *gs) {
+    assert(gs->entity_count < count(gs->entities));
+    assert(gs->free_entity_index_count > 0);
+
+    u32 index = gs->free_entity_indices[--gs->free_entity_index_count];
+    if (index >= gs->entity_count) {
+        gs->entity_count = index + 1;
+    }
+    return index;
+}
+
 static int
-is_entity_dead(entity *e) {
-    return e->flags & ENTITY_FLAG_DEAD;
+is_entity_set(entity *e, u32 flags) {
+    return e->flags & flags;
 }
 
 static void
-set_entity_dead(entity *e) {
-    e->flags |= ENTITY_FLAG_DEAD;
+set_entity(entity *e, u32 flags) {
+    e->flags |= flags;
 }
 
-typedef struct {
-    entity *entity;
-    u32 index;
-} add_entity_result;
-
-static add_entity_result
+static entity *
 add_entity(game_state *gs, entity_type type, vec2 pos) {
-    assert(gs->entity_count < count(gs->entities));
+    u32 index = next_free_entity_index(gs);
 
-    u32 index = gs->entity_count++;
-    entity *entity = gs->entities + index;
-    entity->type = type;
-    entity->pos = pos;
+    entity *e = gs->entities + index;
+    *e = (entity) {};
 
-    add_entity_result result;
-    result.entity = entity;
-    result.index = index;
-    return result;
+    e->index = index;
+    e->type = type;
+    e->pos = pos;
+    return e;
 }
 
-static add_entity_result
+static void
+remove_entity(game_state *gs, entity *e) {
+    assert(gs->free_entity_index_count < MAX_ENTITY_COUNT);
+    gs->free_entity_indices[gs->free_entity_index_count++] = e->index;
+
+    set_entity(e, ENTITY_FLAG_REMOVED);
+}
+
+static entity *
 add_block(game_state *gs, rect2 rect) {
-    add_entity_result result = add_entity(gs, ENTITY_TYPE_BLOCK, getrect2cen(rect));
-    result.entity->size = getrect2size(rect);
-    return result;
+    entity *e = add_entity(gs, ENTITY_TYPE_BLOCK, getrect2cen(rect));
+    e->size = getrect2size(rect);
+    set_entity(e, ENTITY_FLAG_COLLIDE);
+    return e;
 }
 
-static add_entity_result
+static entity *
 add_wall(game_state *gs, rect2 rect) {
-    add_entity_result result = add_entity(gs, ENTITY_TYPE_WALL, getrect2cen(rect));
-    result.entity->size = getrect2size(rect);
-    return result;
+    entity *e = add_entity(gs, ENTITY_TYPE_WALL, getrect2cen(rect));
+    e->size = getrect2size(rect);
+    set_entity(e, ENTITY_FLAG_COLLIDE);
+    return e;
 }
 
-static add_entity_result
+static entity *
 add_paddle(game_state *gs, rect2 rect) {
-    add_entity_result result = add_entity(gs, ENTITY_TYPE_PADDLE, getrect2cen(rect));
-    result.entity->size = getrect2size(rect);
-    return result;
+    entity *e = add_entity(gs, ENTITY_TYPE_PADDLE, getrect2cen(rect));
+    e->size = getrect2size(rect);
+    set_entity(e, ENTITY_FLAG_COLLIDE);
+    return e;
 }
 
-static add_entity_result
+static entity *
 add_ball(game_state *gs, rect2 rect, vec2 vel) {
-    add_entity_result result = add_entity(gs, ENTITY_TYPE_BALL, getrect2cen(rect));
-    result.entity->size = getrect2size(rect);
-    result.entity->vel = vel;
-    return result;
+    entity *e = add_entity(gs, ENTITY_TYPE_BALL, getrect2cen(rect));
+    e->size = getrect2size(rect);
+    e->vel = vel;
+    set_entity(e, ENTITY_FLAG_COLLIDE);
+    return e;
+}
+
+static entity *
+add_ball_tail(game_state *gs, entity *ball) {
+    entity *e = add_entity(gs, ENTITY_TYPE_BALL_TAIL, ball->pos);
+    e->size = v2mul(0.6, ball->size);
+    e->vel = v2zero();
+    return e;
 }
 
 typedef struct {
@@ -107,7 +146,9 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
         for (int entity_index = 0; entity_index < gs->entity_count; ++entity_index) {
             entity *test_entity = gs->entities + entity_index;
 
-            if (mover == test_entity || is_entity_dead(test_entity)) {
+            if (mover == test_entity || is_entity_set(test_entity, ENTITY_FLAG_REMOVED) ||
+                !is_entity_set(test_entity, ENTITY_FLAG_COLLIDE))
+            {
                 continue;
             }
 
@@ -158,8 +199,7 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
             );
 
             if (hit_entity->type == ENTITY_TYPE_BLOCK) {
-                set_entity_dead(hit_entity);
-                /*remove_entity(gs, hit_entity_index);*/
+                remove_entity(gs, hit_entity);
             }
         }
     }
@@ -195,19 +235,18 @@ init(game_state *gs) {
         add_wall(gs, rect2minsize(v2(0.0f, -15.0f), v2(800.0f, 15.0f)));
     }
 
-    gs->player_paddle_index = add_paddle(
+    gs->player_paddle = add_paddle(
         gs, rect2censize(v2(400.0f, 35.0f), v2(100.0f, 30.0f))
-    ).index;
+    );
 
-    add_ball(gs, rect2censize(v2(400.0f, 150.0f), v2(15.0f, 15.0f)), v2(150.0f, 150.0f));
+    add_ball(gs, rect2censize(v2(400.0f, 150.0f), v2(15.0f, 15.0f)), v2(200.0f, 200.0f));
 }
 
 static void
 handle_event(game_state *gs, SDL_Event *e) {
     switch (e->type) {
         case SDL_MOUSEMOTION: {
-            entity *paddle = gs->entities + gs->player_paddle_index;
-            paddle->pos.x = e->motion.x;
+            gs->player_paddle->pos.x = e->motion.x;
         } break;
         default: break;
     }
@@ -218,11 +257,25 @@ update_and_render(game_state *gs, render_context *ctx, f32 dt) {
     for (int i = 0; i < gs->entity_count; ++i) {
         entity *e = gs->entities + i;
 
-        if (is_entity_dead(e)) {
+        if (is_entity_set(e, ENTITY_FLAG_REMOVED)) {
             continue;
         }
 
-        move_entity(gs, e, dt);
+        switch (e->type) {
+            case ENTITY_TYPE_BALL: {
+                add_ball_tail(gs, e);
+                move_entity(gs, e, dt);
+            } break;
+
+            case ENTITY_TYPE_BALL_TAIL: {
+                e->size = v2sub(e->size, v2(0.05f, 0.05f));
+                if (getv2lensq(e->size) < 16.0f) {
+                    remove_entity(gs, e);
+                }
+            } break;
+
+            default: break;
+        }
 
         render_rect(ctx, rect2censize(e->pos, e->size), rgba(1.0f, 1.0f, 1.0f, 1.0f));
     }
@@ -276,6 +329,8 @@ main(void) {
     ctx.height = window_h;
 
     game_state gs = {};
+    init_game_state(&gs);
+
     init(&gs);
 
     f32 dt = 1.0f / 60.0f;
