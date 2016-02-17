@@ -10,8 +10,13 @@ typedef enum {
     ENTITY_TYPE_WALL,
 } entity_type;
 
+typedef enum {
+    ENTITY_FLAG_DEAD = (1 << 0),
+} entity_flag;
+
 typedef struct {
     entity_type type;
+    entity_flag flags;
     vec2 pos;
     vec2 size;
     vec2 vel;
@@ -23,6 +28,16 @@ typedef struct {
 
     u32 player_paddle_index;
 } game_state;
+
+static int
+is_entity_dead(entity *e) {
+    return e->flags & ENTITY_FLAG_DEAD;
+}
+
+static void
+set_entity_dead(entity *e) {
+    e->flags |= ENTITY_FLAG_DEAD;
+}
 
 typedef struct {
     entity *entity;
@@ -42,11 +57,6 @@ add_entity(game_state *gs, entity_type type, vec2 pos) {
     result.entity = entity;
     result.index = index;
     return result;
-}
-
-static void
-remove_entity(game_state *gs, u32 entity_index) {
-    gs->entities[entity_index] = gs->entities[--gs->entity_count];
 }
 
 static add_entity_result
@@ -97,7 +107,7 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
         for (int entity_index = 0; entity_index < gs->entity_count; ++entity_index) {
             entity *test_entity = gs->entities + entity_index;
 
-            if (mover == test_entity) {
+            if (mover == test_entity || is_entity_dead(test_entity)) {
                 continue;
             }
 
@@ -148,6 +158,7 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
             );
 
             if (hit_entity->type == ENTITY_TYPE_BLOCK) {
+                set_entity_dead(hit_entity);
                 /*remove_entity(gs, hit_entity_index);*/
             }
         }
@@ -206,6 +217,10 @@ static void
 update_and_render(game_state *gs, render_context *ctx, f32 dt) {
     for (int i = 0; i < gs->entity_count; ++i) {
         entity *e = gs->entities + i;
+
+        if (is_entity_dead(e)) {
+            continue;
+        }
 
         move_entity(gs, e, dt);
 
