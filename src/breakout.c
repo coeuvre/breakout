@@ -188,10 +188,13 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
         dp = v2sub(targetp, mover->pos);
 
         if (hit_entity) {
+            // NOTE: Reflect the remaining motion
+            //
             // dp = dp - 2.0f * dp * normal * normal;
             dp = v2sub(dp, v2mul(2.0f, v2mul(v2dot(dp, normal), normal)));
-            mover->pos = v2add(mover->pos, dp);
 
+            // NOTE: Reflect the velocity
+            //
             // mover->vel = mover->vel - 2.0f * mover->vel * normal * normal;
             mover->vel = v2sub(
                 mover->vel,
