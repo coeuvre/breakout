@@ -321,8 +321,8 @@ main(void) {
                                              SDL_PIXELFORMAT_RGBA8888,
                                              SDL_TEXTUREACCESS_STREAMING,
                                              window_w, window_h);
-    u32 buffer[window_w * window_h];
-    memset(buffer, 0, sizeof(buffer));
+
+    u32 *buffer = calloc(window_w * window_h, sizeof(u32));
 
     render_context ctx;
     ctx.renderer = renderer;
