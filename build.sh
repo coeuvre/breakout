@@ -9,7 +9,7 @@ clear
 
 pushd build
 
-$cc -std=c11 -W -Wall -g $src -lSDL2
+$cc -o breakout -std=c11 -W -Wall -g $src -lSDL2
 
 success=$?
 
