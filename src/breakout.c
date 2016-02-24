@@ -143,7 +143,7 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
         entity *hit_entity = 0;
         u32 hit_entity_index = 0;
 
-        for (int entity_index = 0; entity_index < gs->entity_count; ++entity_index) {
+        for (u32 entity_index = 0; entity_index < gs->entity_count; ++entity_index) {
             entity *test_entity = gs->entities + entity_index;
 
             if (mover == test_entity || is_entity_set(test_entity, ENTITY_FLAG_REMOVED) ||
@@ -167,7 +167,7 @@ move_entity(game_state *gs, entity *mover, f32 dt) {
                 { line2ab(bound.min, v2(bound.max.x, bound.min.y)), v2(0.0f, -1.0f) },
             };
 
-            for (int line_index = 0; line_index < count(test_lines); ++line_index) {
+            for (u32 line_index = 0; line_index < count(test_lines); ++line_index) {
                 test_line *test_line = test_lines + line_index;
                 if (v2dot(dp, test_line->normal) < 0.0f) {
                     intersection intersection = ray2_line2_intersection_test(motion, test_line->line);
@@ -257,7 +257,7 @@ handle_event(game_state *gs, SDL_Event *e) {
 
 static void
 update_and_render(game_state *gs, render_context *ctx, f32 dt) {
-    for (int i = 0; i < gs->entity_count; ++i) {
+    for (u32 i = 0; i < gs->entity_count; ++i) {
         entity *e = gs->entities + i;
 
         if (is_entity_set(e, ENTITY_FLAG_REMOVED)) {
