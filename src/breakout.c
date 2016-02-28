@@ -257,6 +257,8 @@ handle_event(game_state *gs, SDL_Event *e) {
 
 static void
 update_and_render(game_state *gs, render_context *ctx, f32 dt) {
+    memset(ctx->buf, 0, sizeof(*ctx->buf) * ctx->width * ctx->height);
+
     for (u32 i = 0; i < gs->entity_count; ++i) {
         entity *e = gs->entities + i;
 
@@ -282,6 +284,10 @@ update_and_render(game_state *gs, render_context *ctx, f32 dt) {
 
         render_rect(ctx, rect2censize(e->pos, e->size), rgba(1.0f, 1.0f, 1.0f, 1.0f));
     }
+
+    vec2 size = v2(640.0f, 100.0f);
+    render_gradient_rect(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f), size));
+    render_gradient_rect_with_gamma_correction(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f + size.y), size));
 }
 
 int
