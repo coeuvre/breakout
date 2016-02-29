@@ -201,13 +201,34 @@ typedef union {
         f32 x;
         f32 y;
         f32 z;
-        f32 w;
     };
 
     struct {
         f32 r;
         f32 g;
         f32 b;
+    };
+} vec3;
+
+typedef union {
+    struct {
+        f32 x;
+        f32 y;
+        f32 z;
+        f32 w;
+    };
+
+    struct {
+        union {
+            struct {
+                f32 r;
+                f32 g;
+                f32 b;
+            };
+
+            vec3 rgb;
+        };
+
         f32 a;
     };
 } vec4;

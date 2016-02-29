@@ -287,7 +287,7 @@ update_and_render(game_state *gs, render_context *ctx, f32 dt) {
 
     vec2 size = v2(640.0f, 100.0f);
     render_gradient_rect(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f), size));
-    render_gradient_rect_with_gamma_correction(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f + size.y), size));
+    render_gradient_rect_without_gamma_correction(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f + size.y), size));
 }
 
 int
@@ -336,6 +336,7 @@ main(void) {
     ctx.buf = buffer;
     ctx.width = window_w;
     ctx.height = window_h;
+    ctx.pitch = ctx.width * 4;
 
     game_state gs = {};
     init_game_state(&gs);
