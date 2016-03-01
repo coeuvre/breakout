@@ -4,6 +4,7 @@
 typedef struct {
     SDL_Renderer *renderer;
     SDL_Texture *texture;
+    // NOTE: The buf is in sRGB color space
     u32 *buf;
     i32 width;
     i32 height;

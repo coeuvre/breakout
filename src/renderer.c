@@ -62,18 +62,6 @@ u32_srgb_to_linear(u32 color) {
 
 static void
 copy_pixels_to_texture(render_context *ctx) {
-    // do gamma correction
-    u8 *row = (u8 *)ctx->buf;
-    for (i32 y = 0; y < ctx->width; ++y) {
-        u32 *pixel = (u32 *)row;
-        for (i32 x = 0; x < ctx->width; ++x) {
-            *pixel = u32_linear_to_srgb(*pixel);
-
-            pixel++;
-        }
-        row += ctx->pitch;
-    }
-
     SDL_UpdateTexture(ctx->texture, 0, ctx->buf, ctx->width * 4);
 }
 
@@ -119,6 +107,7 @@ render_gradient_rect(render_context *ctx, rect2 rect) {
         for (i32 x = minx; x < maxx; ++x) {
             f32 intensity = (x - minx) * 1.0f / size;
             u32 color = rgba_to_u32(rgba(intensity, intensity, intensity, 1.0f));
+            color = u32_linear_to_srgb(color);
             *pixel++ = color;
         }
         row -= ctx->width;
@@ -144,7 +133,6 @@ render_gradient_rect_without_gamma_correction(render_context *ctx, rect2 rect) {
         for (i32 x = minx; x < maxx; ++x) {
             f32 intensity = (x - minx) * 1.0f / size;
             u32 color = rgba_to_u32(rgba(intensity, intensity, intensity, 1.0f));
-            color = u32_srgb_to_linear(color);
             *pixel++ = color;
         }
         row -= ctx->width;
