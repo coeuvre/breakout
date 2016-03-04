@@ -284,10 +284,6 @@ update_and_render(game_state *gs, render_context *ctx, f32 dt) {
 
         render_rect(ctx, rect2censize(e->pos, e->size), rgba(1.0f, 1.0f, 1.0f, 1.0f));
     }
-
-    vec2 size = v2(640.0f, 100.0f);
-    render_gradient_rect(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f), size));
-    render_gradient_rect_without_gamma_correction(ctx, rect2censize(v2(ctx->width / 2.0f, ctx->height / 2.0f + size.y), size));
 }
 
 int
